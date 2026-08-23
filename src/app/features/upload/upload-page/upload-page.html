@@ -1,0 +1,104 @@
+<div class="upload-page">
+  <h1 class="upload-page__title">Upload an invoice</h1>
+  <p class="upload-page__subtitle">Upload a PDF or image to extract invoice data.</p>
+
+  @if (!selectedFile()) {
+    <app-dropzone (fileSelected)="onFileSelected($event)" (fileRejected)="onFileRejected($event)" />
+  }
+
+  @if (selectedFile(); as file) {
+    <div class="upload-layout">
+      <div class="upload-layout__preview">
+        <div class="file-preview">
+          @if (previewKind() === 'image' && previewImageUrl(); as url) {
+            <img [src]="url" [alt]="'Preview of ' + file.name" class="file-preview__image" />
+          } @else if (previewKind() === 'pdf' && previewPdfUrl(); as url) {
+            <embed [src]="url" type="application/pdf" class="file-preview__pdf" />
+          } @else {
+            <div class="file-preview__placeholder">{{ fileExtensionLabel(file) }}</div>
+          }
+        </div>
+
+        <div class="selected-file">
+          <div class="selected-file__info">
+            <span class="selected-file__name">{{ file.name }}</span>
+            <span class="selected-file__size">{{ formatFileSize(file.size) }}</span>
+          </div>
+          <button
+            type="button"
+            class="selected-file__remove"
+            [disabled]="isSubmitting()"
+            (click)="removeSelectedFile()"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+
+      <div class="upload-layout__controls">
+        <label class="field">
+          <span class="field__label">Split value (optional)</span>
+          <input
+            type="text"
+            class="field__input"
+            [ngModel]="splitValue()"
+            (ngModelChange)="splitValue.set($event)"
+            [attr.disabled]="isSubmitting() || null"
+            placeholder="e.g. 5"
+          />
+          <span class="field__hint">Accepted formats: "5", "1-5", or "1-3, 4-6, 7-9"</span>
+        </label>
+
+        <button type="button" class="submit-btn" [disabled]="isSubmitting()" (click)="onSubmit()">
+          {{ isSubmitting() ? 'Uploading…' : 'Upload' }}
+        </button>
+      </div>
+    </div>
+
+    @let s = state();
+
+    @if (s.phase === 'needs-confirmation') {
+      <app-confirm-dialog
+        title="No split value"
+        [message]="s.message"
+        confirmLabel="Proceed without split value"
+        cancelLabel="Go back and enter one"
+        (confirmed)="confirmProceedWithoutSplit()"
+        (cancelled)="cancelProceedWithoutSplit()"
+      />
+    }
+  }
+
+  @if (awaitingSplitConfirmation()) {
+    <app-confirm-dialog
+      title="No split value"
+      [message]="confirmMessage"
+      confirmLabel="Proceed without split value"
+      cancelLabel="Go back and enter one"
+      (confirmed)="confirmProceedWithoutSplit()"
+      (cancelled)="cancelProceedWithoutSplit()"
+    />
+  }
+
+  @if (isSubmitting()) {
+    <div class="processing-overlay" role="status" aria-live="polite">
+      <div class="processing-modal">
+        <div class="processing-ring-wrap">
+          <svg class="processing-ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="processing-ring__track" cx="50" cy="50" r="42" />
+            <circle
+              class="processing-ring__bar"
+              cx="50"
+              cy="50"
+              r="42"
+              [attr.stroke-dasharray]="ringCircumference"
+              [attr.stroke-dashoffset]="ringOffset()"
+            />
+          </svg>
+          <span class="processing-modal__percent">{{ displayProgress() }}%</span>
+        </div>
+        <p class="processing-modal__label">Processing your document…</p>
+      </div>
+    </div>
+  }
+</div>

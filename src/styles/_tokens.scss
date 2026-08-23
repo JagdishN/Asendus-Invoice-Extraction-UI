@@ -1,0 +1,36 @@
+// Central design tokens for the invoice-extraction-ui app.
+// Mirrors the sister application's (AiZen) visual identity.
+// Update palette values here only — components should consume the CSS
+// custom properties below rather than hardcoding colors.
+:root {
+  // Brand
+  --color-primary: #7c3aed; // top nav / active + selected states
+  --color-accent: #4b7aed; // links / secondary interactive elements
+
+  // Surfaces
+  --color-page-bg: #f5f8ff; // page background
+  --color-surface: #ffffff; // card / surface background
+  --color-content-bg: #f5f7fb; // content area background
+
+  // State
+  --color-muted: #9ca3af; // muted / disabled state
+
+  // Derived / supporting tones (kept close to the brand hues above)
+  --color-primary-hover: #6d28d9;
+  --color-accent-hover: #3b63c9;
+  --color-border: #e2e5ec;
+  --color-text: #1f2430;
+  --color-text-inverse: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fdecec;
+  --color-success: #16a34a;
+  --color-success-bg: #eafaf0;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fef6e7;
+
+  // Spacing / shape shared across components
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-card: 0 1px 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(17, 24, 39, 0.04);
+}

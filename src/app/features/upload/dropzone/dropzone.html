@@ -1,0 +1,22 @@
+<div
+  class="dropzone"
+  [class.dropzone--active]="isDragOver()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+  (click)="fileInput.click()"
+  role="button"
+  tabindex="0"
+  (keydown.enter)="fileInput.click()"
+>
+  <input
+    #fileInput
+    type="file"
+    class="dropzone__input"
+    [attr.accept]="acceptAttr"
+    (change)="onFileInputChange($event)"
+  />
+
+  <p class="dropzone__title">Drag & drop a file here, or click to browse</p>
+  <p class="dropzone__hint">Supported formats: PDF, JPEG, PNG, WEBP</p>
+</div>

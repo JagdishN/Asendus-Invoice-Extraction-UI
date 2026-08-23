@@ -1,0 +1,39 @@
+<div class="history-page">
+  <div class="history-page__header">
+    <h1 class="history-page__title">Job history</h1>
+    <button type="button" class="refresh-btn" (click)="refresh()" [disabled]="loading()">
+      {{ loading() ? 'Refreshing…' : 'Refresh' }}
+    </button>
+  </div>
+
+  @if (loading() && jobs().length === 0) {
+    <p class="history-page__hint">Loading jobs…</p>
+  } @else if (jobs().length === 0) {
+    <p class="history-page__hint">No jobs yet. Upload a file to get started.</p>
+  } @else {
+    <div class="table-wrap">
+      <table class="jobs-table">
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Status</th>
+            <th>Invoices</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (job of jobs(); track job.job_id) {
+            <tr [routerLink]="['/history', job.job_id]" class="jobs-table__row">
+              <td>{{ job.original_filename }}</td>
+              <td>
+                <span class="status-pill" [attr.data-status]="job.status">{{ job.status }}</span>
+              </td>
+              <td>{{ job.invoice_count }}</td>
+              <td>{{ job.created_at | date: 'medium' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

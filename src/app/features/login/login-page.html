@@ -1,0 +1,36 @@
+<div class="login-page">
+  <div class="login-card">
+    <h1 class="login-card__title">Sign in</h1>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="login-form" novalidate>
+      <label class="field">
+        <span class="field__label">Username</span>
+        <input type="text" formControlName="username" autocomplete="username" placeholder="Enter your username" />
+        @if (form.controls.username.invalid && form.controls.username.touched) {
+          <span class="field__error">Username is required.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span class="field__label">Password</span>
+        <input
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+          placeholder="Enter your password"
+        />
+        @if (form.controls.password.invalid && form.controls.password.touched) {
+          <span class="field__error">Password must be at least 6 characters.</span>
+        }
+      </label>
+
+      <div class="login-form__links">
+        <a href="javascript:void(0)" class="link">Forgot Password</a>
+      </div>
+
+      <button type="submit" class="submit-btn" [disabled]="form.invalid || submitting()">
+        {{ submitting() ? 'Signing in…' : 'Sign in' }}
+      </button>
+    </form>
+  </div>
+</div>

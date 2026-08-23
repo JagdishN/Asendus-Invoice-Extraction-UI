@@ -1,0 +1,58 @@
+<div class="detail-page">
+  <a routerLink="/history" class="back-link">&larr; Back to history</a>
+
+  @let s = state();
+
+  @if (s.phase === 'loading') {
+    <p class="detail-page__hint">Loading job…</p>
+  }
+
+  @if (s.phase === 'loaded') {
+    <h1 class="detail-page__title">{{ s.job.original_filename }}</h1>
+
+    <dl class="detail-grid">
+      <div class="detail-grid__row">
+        <dt>Job ID</dt>
+        <dd>{{ s.job.job_id }}</dd>
+      </div>
+      <div class="detail-grid__row">
+        <dt>Status</dt>
+        <dd>{{ s.job.status }}</dd>
+      </div>
+      @if (s.job.invoice_groups) {
+        <div class="detail-grid__row">
+          <dt>Invoice groups</dt>
+          <dd>{{ s.job.invoice_groups.length }}</dd>
+        </div>
+      }
+      <div class="detail-grid__row">
+        <dt>Created</dt>
+        <dd>{{ s.job.created_at }}</dd>
+      </div>
+      @if (s.job.page_count !== undefined) {
+        <div class="detail-grid__row">
+          <dt>Pages</dt>
+          <dd>{{ s.job.page_count }}</dd>
+        </div>
+      }
+      @if (s.job.split_value_raw) {
+        <div class="detail-grid__row">
+          <dt>Split value</dt>
+          <dd>{{ s.job.split_value_raw }}</dd>
+        </div>
+      }
+      @if (s.job.file_type) {
+        <div class="detail-grid__row">
+          <dt>File type</dt>
+          <dd>{{ s.job.file_type }}</dd>
+        </div>
+      }
+      @if (s.job.error_message) {
+        <div class="detail-grid__row">
+          <dt>Error</dt>
+          <dd>{{ s.job.error_message }}</dd>
+        </div>
+      }
+    </dl>
+  }
+</div>

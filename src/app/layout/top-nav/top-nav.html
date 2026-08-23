@@ -1,0 +1,25 @@
+<header class="top-nav">
+  <div class="top-nav__brand">
+    <a routerLink="/upload" class="top-nav__logo">Invoice Extraction</a>
+  </div>
+
+  <nav class="top-nav__links">
+    @if (auth.isAuthenticated()) {
+      <a routerLink="/upload" routerLinkActive="is-active" class="top-nav__link">Upload</a>
+
+      @if (features.enableHistory) {
+        <a routerLink="/history" routerLinkActive="is-active" class="top-nav__link">History</a>
+      }
+
+      <button type="button" class="top-nav__logout" (click)="auth.logout()" aria-label="Logout" title="Logout">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+      </button>
+    } @else if (features.enableLogin) {
+      <a routerLink="/login" routerLinkActive="is-active" class="top-nav__link">Login</a>
+    }
+  </nav>
+</header>
