@@ -63,6 +63,12 @@ export interface JobExportResult {
   contentType: string | null;
 }
 
+/** One selectable line-item export column, from GET /api/jobs/export/columns — a fixed, job-independent list. */
+export interface ExportColumn {
+  field_name: string;
+  label: string;
+}
+
 /** Structured error surfaced by JobApiService for the upload workflow. */
 export interface JobApiError {
   kind: 'confirmation-required' | 'validation-error' | 'unauthorized' | 'unknown';

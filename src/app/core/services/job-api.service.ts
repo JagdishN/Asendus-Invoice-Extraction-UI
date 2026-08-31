@@ -1,8 +1,15 @@
-import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, from, map, switchMap, throwError } from 'rxjs';
 
-import { CreateJobResponse, JobApiError, JobDetail, JobExportResult, JobSummary } from '../models/job.models';
+import {
+  CreateJobResponse,
+  ExportColumn,
+  JobApiError,
+  JobDetail,
+  JobExportResult,
+  JobSummary
+} from '../models/job.models';
 import { buildApiUrl } from '../utils/api-url';
 import { filenameFromContentDisposition } from '../utils/download';
 import { extractErrorDetail } from '../utils/http-error';
@@ -46,10 +53,29 @@ export class JobApiService {
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => this.toJobApiError(error))));
   }
 
-  /** Default export: a zip when the job has multiple invoices, the single CSV directly otherwise — same call either way, per the backend's own default-download logic. */
-  exportJob(jobId: string): Observable<JobExportResult> {
+  /** The fixed, job-independent list of line-item columns available for export (see GET /api/jobs/export/columns). */
+  getExportColumns(): Observable<ExportColumn[]> {
     return this.http
-      .get(`${this.baseUrl}/${jobId}/export`, { observe: 'response', responseType: 'blob' })
+      .get<{ columns: ExportColumn[] }>(`${this.baseUrl}/export/columns`)
+      .pipe(
+        map((response) => response.columns),
+        catchError((error: HttpErrorResponse) => throwError(() => this.toJobApiError(error)))
+      );
+  }
+
+  /**
+   * Default export: a zip when the job has multiple invoices, the single CSV directly otherwise
+   * — same call either way, per the backend's own default-download logic. `columns` filters which
+   * line-item fields are included; omit (or pass every field_name) for every column — the backend
+   * reuses its cached "every column" export in that case, rebuilding fresh only when filtered.
+   */
+  exportJob(jobId: string, columns?: string[]): Observable<JobExportResult> {
+    return this.http
+      .get(`${this.baseUrl}/${jobId}/export`, {
+        observe: 'response',
+        responseType: 'blob',
+        params: this.buildColumnsParams(columns)
+      })
       .pipe(
         map((response) => this.toExportResult(response)),
         catchError((error: HttpErrorResponse) => this.toBlobError(error))
@@ -57,16 +83,25 @@ export class JobApiService {
   }
 
   /** Exports a single invoice's CSV. invoice_number may contain '/', so it's percent-encoded before going into the URL path. */
-  exportInvoice(jobId: string, invoiceNumber: string): Observable<JobExportResult> {
+  exportInvoice(jobId: string, invoiceNumber: string, columns?: string[]): Observable<JobExportResult> {
     return this.http
       .get(`${this.baseUrl}/${jobId}/export/${encodeURIComponent(invoiceNumber)}`, {
         observe: 'response',
-        responseType: 'blob'
+        responseType: 'blob',
+        params: this.buildColumnsParams(columns)
       })
       .pipe(
         map((response) => this.toExportResult(response)),
         catchError((error: HttpErrorResponse) => this.toBlobError(error))
       );
+  }
+
+  private buildColumnsParams(columns?: string[]): HttpParams {
+    let params = new HttpParams();
+    if (columns && columns.length > 0) {
+      params = params.set('columns', columns.join(','));
+    }
+    return params;
   }
 
   private toExportResult(response: HttpResponse<Blob>): JobExportResult {

@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { CreateJobResponse, JobDetail, JobSummary } from '../models/job.models';
+import { CreateJobResponse, ExportColumn, JobDetail, JobSummary } from '../models/job.models';
 import { JobApiService } from './job-api.service';
 
 describe('JobApiService', () => {
@@ -164,7 +164,52 @@ describe('JobApiService', () => {
     });
   });
 
+  describe('getExportColumns', () => {
+    it('gets and unwraps the columns list', () => {
+      const columns: ExportColumn[] = [
+        { field_name: 'line_number', label: 'Line #' },
+        { field_name: 'item_description', label: 'Item Description' }
+      ];
+      let result: ExportColumn[] | undefined;
+
+      service.getExportColumns().subscribe((r) => (result = r));
+
+      const req = httpMock.expectOne('/api/jobs/export/columns');
+      expect(req.request.method).toBe('GET');
+      req.flush({ columns });
+
+      expect(result).toEqual(columns);
+    });
+
+    it('translates a 401 into an unauthorized error', () => {
+      let captured: unknown;
+      service.getExportColumns().subscribe({ error: (err) => (captured = err) });
+
+      httpMock
+        .expectOne('/api/jobs/export/columns')
+        .flush({ detail: 'Not authenticated' }, { status: 401, statusText: 'Unauthorized' });
+
+      expect(captured).toEqual({ kind: 'unauthorized', message: 'Not authenticated', status: 401 });
+    });
+  });
+
   describe('exportJob', () => {
+    it('omits the columns query param when none are passed (uses the cached "every column" export)', () => {
+      service.exportJob('1').subscribe();
+
+      const req = httpMock.expectOne((r) => r.url === '/api/jobs/1/export');
+      expect(req.request.params.has('columns')).toBe(false);
+      req.flush(new Blob(['data']));
+    });
+
+    it('sends a comma-separated columns query param when a subset is passed', () => {
+      service.exportJob('1', ['line_number', 'item_description']).subscribe();
+
+      const req = httpMock.expectOne((r) => r.url === '/api/jobs/1/export');
+      expect(req.request.params.get('columns')).toBe('line_number,item_description');
+      req.flush(new Blob(['data']));
+    });
+
     it('gets the export as a blob and reads the filename off Content-Disposition', () => {
       const blob = new Blob(['a,b\n1,2'], { type: 'text/csv' });
       let result: { blob: Blob; filename: string | null; contentType: string | null } | undefined;
@@ -235,6 +280,14 @@ describe('JobApiService', () => {
       req.flush(blob);
 
       expect(result?.blob).toBe(blob);
+    });
+
+    it('sends a comma-separated columns query param when a subset is passed', () => {
+      service.exportInvoice('1', 'INV-001', ['line_number']).subscribe();
+
+      const req = httpMock.expectOne((r) => r.url === '/api/jobs/1/export/INV-001');
+      expect(req.request.params.get('columns')).toBe('line_number');
+      req.flush(new Blob(['data']));
     });
   });
 });

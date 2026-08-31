@@ -22,9 +22,49 @@
         <h1 class="preview-header__title">{{ job.original_filename }}</h1>
         <span class="status-pill" [attr.data-status]="job.status">{{ job.status }}</span>
       </div>
-      <button type="button" class="download-btn" [disabled]="downloadingJob()" (click)="downloadJob(job)">
-        {{ downloadingJob() ? 'Downloading…' : 'Download' }}
-      </button>
+      <div class="preview-header__actions">
+        <div class="columns-dropdown">
+          <button
+            type="button"
+            class="columns-dropdown__toggle"
+            [attr.aria-expanded]="columnsPanelOpen()"
+            (click)="toggleColumnsPanel()"
+          >
+            {{ columnsSummary() }}
+            <span class="columns-dropdown__caret" aria-hidden="true">&#9662;</span>
+          </button>
+
+          @if (columnsPanelOpen()) {
+            <div class="columns-dropdown__panel">
+              <label class="columns-dropdown__option columns-dropdown__option--all">
+                <input
+                  type="checkbox"
+                  [checked]="allColumnsSelected()"
+                  [indeterminate]="someColumnsSelected()"
+                  (change)="toggleSelectAllColumns()"
+                />
+                Select All
+              </label>
+              <div class="columns-dropdown__list">
+                @for (col of exportColumns(); track col.field_name) {
+                  <label class="columns-dropdown__option">
+                    <input
+                      type="checkbox"
+                      [checked]="isColumnSelected(col.field_name)"
+                      (change)="toggleColumn(col.field_name)"
+                    />
+                    {{ col.label }}
+                  </label>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <button type="button" class="download-btn" [disabled]="downloadingJob()" (click)="downloadJob(job)">
+          {{ downloadingJob() ? 'Downloading…' : 'Download' }}
+        </button>
+      </div>
     </div>
 
     @if (job.invoice_groups && job.invoice_groups.length > 0) {

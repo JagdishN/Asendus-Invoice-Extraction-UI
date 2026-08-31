@@ -11,6 +11,6 @@ export const environment: Environment = {
   devCredentials: {
     username: 'Admin',
     // Left blank on purpose — set this locally, don't commit a real password.
-    password: ''
+    password: 'Admin@123'
   }
 };

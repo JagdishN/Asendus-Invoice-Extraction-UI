@@ -1,9 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
 
-import { HeaderFieldValue, InvoiceGroup, JobApiError, JobDetail } from '../../../core/models/job.models';
+import { ExportColumn, HeaderFieldValue, InvoiceGroup, JobApiError, JobDetail } from '../../../core/models/job.models';
 import { JobApiService } from '../../../core/services/job-api.service';
 import { JobDetailStore } from '../../../core/services/job-detail-store.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -38,6 +38,21 @@ export class PreviewPage {
   protected readonly downloadingInvoice = signal<string | null>(null);
   protected readonly formatPageRanges = formatPageRanges;
 
+  protected readonly exportColumns = signal<ExportColumn[]>([]);
+  protected readonly selectedColumns = signal<Set<string>>(new Set());
+  protected readonly columnsPanelOpen = signal(false);
+
+  protected readonly allColumnsSelected = computed(
+    () => this.exportColumns().length > 0 && this.selectedColumns().size === this.exportColumns().length
+  );
+  protected readonly someColumnsSelected = computed(
+    () => this.selectedColumns().size > 0 && !this.allColumnsSelected()
+  );
+  protected readonly columnsSummary = computed(() => {
+    const total = this.exportColumns().length;
+    return total === 0 ? 'Columns' : `Columns (${this.selectedColumns().size}/${total})`;
+  });
+
   constructor() {
     this.route.paramMap
       .pipe(
@@ -49,10 +64,55 @@ export class PreviewPage {
         this.selectedIndex.set(0);
         this.store.load(jobId);
       });
+
+    this.jobApi.getExportColumns().subscribe({
+      next: (columns) => {
+        this.exportColumns.set(columns);
+        this.selectedColumns.set(new Set(columns.map((c) => c.field_name)));
+      },
+      error: (error: JobApiError) => {
+        if (error.kind !== 'unauthorized') {
+          this.toast.error(error.message);
+        }
+      }
+    });
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (this.columnsPanelOpen() && !(event.target as HTMLElement).closest('.columns-dropdown')) {
+      this.columnsPanelOpen.set(false);
+    }
   }
 
   protected selectInvoice(index: number): void {
     this.selectedIndex.set(index);
+  }
+
+  protected toggleColumnsPanel(): void {
+    this.columnsPanelOpen.update((open) => !open);
+  }
+
+  protected toggleColumn(fieldName: string): void {
+    this.selectedColumns.update((current) => {
+      const next = new Set(current);
+      if (next.has(fieldName)) {
+        next.delete(fieldName);
+      } else {
+        next.add(fieldName);
+      }
+      return next;
+    });
+  }
+
+  protected toggleSelectAllColumns(): void {
+    this.selectedColumns.set(
+      this.allColumnsSelected() ? new Set() : new Set(this.exportColumns().map((c) => c.field_name))
+    );
+  }
+
+  protected isColumnSelected(fieldName: string): boolean {
+    return this.selectedColumns().has(fieldName);
   }
 
   protected reviewFlag(group: InvoiceGroup): boolean {
@@ -100,8 +160,12 @@ export class PreviewPage {
     if (this.downloadingJob()) {
       return;
     }
+    if (this.selectedColumns().size === 0) {
+      this.toast.error('Select at least one column before downloading.');
+      return;
+    }
     this.downloadingJob.set(true);
-    this.jobApi.exportJob(job.job_id).subscribe({
+    this.jobApi.exportJob(job.job_id, this.columnsForExport()).subscribe({
       next: (result) => {
         this.downloadingJob.set(false);
         triggerBlobDownload(result.blob, result.filename ?? this.fallbackJobFilename(job, result.contentType));
@@ -119,8 +183,12 @@ export class PreviewPage {
     if (this.downloadingInvoice()) {
       return;
     }
+    if (this.selectedColumns().size === 0) {
+      this.toast.error('Select at least one column before downloading.');
+      return;
+    }
     this.downloadingInvoice.set(invoiceNumber);
-    this.jobApi.exportInvoice(job.job_id, invoiceNumber).subscribe({
+    this.jobApi.exportInvoice(job.job_id, invoiceNumber, this.columnsForExport()).subscribe({
       next: (result) => {
         this.downloadingInvoice.set(null);
         triggerBlobDownload(result.blob, result.filename ?? `${this.sanitizeFilename(invoiceNumber)}.csv`);
@@ -132,6 +200,11 @@ export class PreviewPage {
         }
       }
     });
+  }
+
+  /** Omit the columns param entirely when every column is selected — the backend reuses its cached "every column" export in that case, only rebuilding fresh for a filtered set. */
+  private columnsForExport(): string[] | undefined {
+    return this.allColumnsSelected() ? undefined : Array.from(this.selectedColumns());
   }
 
   private fallbackJobFilename(job: JobDetail, contentType: string | null): string {

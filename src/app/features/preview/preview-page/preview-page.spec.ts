@@ -2,7 +2,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { TestBed } from '@angular/core/testing';
 import { Subject, of, throwError } from 'rxjs';
 
-import { JobApiError, JobDetail, JobExportResult } from '../../../core/models/job.models';
+import { ExportColumn, JobApiError, JobDetail, JobExportResult } from '../../../core/models/job.models';
 import { JobApiService } from '../../../core/services/job-api.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PreviewPage } from './preview-page';
@@ -12,6 +12,7 @@ describe('PreviewPage', () => {
   let getJob: ReturnType<typeof vi.fn>;
   let exportJob: ReturnType<typeof vi.fn>;
   let exportInvoice: ReturnType<typeof vi.fn>;
+  let getExportColumns: ReturnType<typeof vi.fn>;
   let paramMap$: Subject<ReturnType<typeof convertToParamMap>>;
   let createObjectURL: ReturnType<typeof vi.fn>;
   let revokeObjectURL: ReturnType<typeof vi.fn>;
@@ -82,13 +83,19 @@ describe('PreviewPage', () => {
     ]
   };
 
+  const exportColumns: ExportColumn[] = [
+    { field_name: 'line_number', label: 'Line #' },
+    { field_name: 'item_description', label: 'Item Description' },
+    { field_name: 'quantity', label: 'Quantity' }
+  ];
+
   async function createComponent(): Promise<void> {
     paramMap$ = new Subject();
     await TestBed.configureTestingModule({
       imports: [PreviewPage],
       providers: [
         provideRouter([]),
-        { provide: JobApiService, useValue: { getJob, exportJob, exportInvoice } },
+        { provide: JobApiService, useValue: { getJob, exportJob, exportInvoice, getExportColumns } },
         { provide: ActivatedRoute, useValue: { paramMap: paramMap$ } }
       ]
     }).compileComponents();
@@ -100,6 +107,7 @@ describe('PreviewPage', () => {
     getJob = vi.fn().mockReturnValue(of(singleGroupJob));
     exportJob = vi.fn();
     exportInvoice = vi.fn();
+    getExportColumns = vi.fn().mockReturnValue(of(exportColumns));
 
     let nextUrl = 0;
     createObjectURL = vi.fn(() => `blob:export-${++nextUrl}`);
@@ -245,7 +253,7 @@ describe('PreviewPage', () => {
     (fixture.nativeElement.querySelector('.download-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(exportJob).toHaveBeenCalledWith('job-1');
+    expect(exportJob).toHaveBeenCalledWith('job-1', undefined);
     expect(createObjectURL).toHaveBeenCalledWith(result.blob);
     expect(clickSpy).toHaveBeenCalled();
   });
@@ -272,7 +280,7 @@ describe('PreviewPage', () => {
     (fixture.nativeElement.querySelector('.download-link') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(exportInvoice).toHaveBeenCalledWith('job-1', 'INV-001');
+    expect(exportInvoice).toHaveBeenCalledWith('job-1', 'INV-001', undefined);
     expect(createObjectURL).toHaveBeenCalledWith(result.blob);
   });
 
@@ -303,5 +311,106 @@ describe('PreviewPage', () => {
 
     const toastService = TestBed.inject(ToastService);
     expect(toastService.toasts().map((t) => t.message)).not.toContain('Session expired.');
+  });
+
+  describe('column selection dropdown', () => {
+    function toggle(): void {
+      (fixture.nativeElement.querySelector('.columns-dropdown__toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+    }
+
+    function checkboxFor(label: string): HTMLInputElement {
+      const options = Array.from(
+        fixture.nativeElement.querySelectorAll('.columns-dropdown__option')
+      ) as HTMLLabelElement[];
+      const option = options.find((el) => el.textContent?.trim().includes(label));
+      return option?.querySelector('input') as HTMLInputElement;
+    }
+
+    beforeEach(async () => {
+      exportJob.mockReturnValue(new Subject());
+      await createComponent();
+      paramMap$.next(convertToParamMap({ jobId: 'job-1' }));
+      fixture.detectChanges();
+    });
+
+    it('loads the columns list and defaults to every column selected', () => {
+      expect(getExportColumns).toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__toggle').textContent).toContain('Columns (3/3)');
+
+      toggle();
+      const allCheckbox = checkboxFor('Select All');
+      expect(allCheckbox.checked).toBe(true);
+      expect(allCheckbox.indeterminate).toBe(false);
+      expect(checkboxFor('Line #').checked).toBe(true);
+      expect(checkboxFor('Item Description').checked).toBe(true);
+      expect(checkboxFor('Quantity').checked).toBe(true);
+    });
+
+    it('opens and closes the panel via the toggle button, and updates the count when a column is deselected', () => {
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__panel')).toBeFalsy();
+
+      toggle();
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__panel')).toBeTruthy();
+
+      checkboxFor('Quantity').dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__toggle').textContent).toContain('Columns (2/3)');
+      const allCheckbox = checkboxFor('Select All');
+      expect(allCheckbox.checked).toBe(false);
+      expect(allCheckbox.indeterminate).toBe(true);
+
+      toggle();
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__panel')).toBeFalsy();
+    });
+
+    it('closes the panel on an outside click', () => {
+      toggle();
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__panel')).toBeTruthy();
+
+      document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__panel')).toBeFalsy();
+    });
+
+    it('"Select All" deselects everything when all are selected, and reselects everything when clicked again', () => {
+      toggle();
+      checkboxFor('Select All').dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__toggle').textContent).toContain('Columns (0/3)');
+
+      checkboxFor('Select All').dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__toggle').textContent).toContain('Columns (3/3)');
+    });
+
+    it('downloads with only the selected column field_names, omitting the deselected one', () => {
+      toggle();
+      checkboxFor('Quantity').dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      toggle();
+
+      (fixture.nativeElement.querySelector('.download-btn') as HTMLButtonElement).click();
+
+      expect(exportJob).toHaveBeenCalledWith('job-1', ['line_number', 'item_description']);
+    });
+
+    it('blocks the download and shows an error toast when every column is deselected', () => {
+      toggle();
+      checkboxFor('Select All').dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      toggle();
+
+      (fixture.nativeElement.querySelector('.download-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(exportJob).not.toHaveBeenCalled();
+      const toastService = TestBed.inject(ToastService);
+      expect(toastService.toasts().map((t) => t.message)).toContain('Select at least one column before downloading.');
+    });
   });
 });
