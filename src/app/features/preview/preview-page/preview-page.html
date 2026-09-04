@@ -45,15 +45,23 @@
                 />
                 Select All
               </label>
+              <p class="columns-dropdown__hint">Required columns are always included.</p>
               <div class="columns-dropdown__list">
                 @for (col of exportColumns(); track col.field_name) {
-                  <label class="columns-dropdown__option">
+                  <label
+                    class="columns-dropdown__option"
+                    [class.columns-dropdown__option--locked]="isMandatoryColumn(col.field_name)"
+                  >
                     <input
                       type="checkbox"
                       [checked]="isColumnSelected(col.field_name)"
+                      [disabled]="isMandatoryColumn(col.field_name)"
                       (change)="toggleColumn(col.field_name)"
                     />
                     {{ col.label }}
+                    @if (isMandatoryColumn(col.field_name)) {
+                      <span class="columns-dropdown__required">Required</span>
+                    }
                   </label>
                 }
               </div>

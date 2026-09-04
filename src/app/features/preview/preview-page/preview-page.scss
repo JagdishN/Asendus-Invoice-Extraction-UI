@@ -178,6 +178,34 @@
   margin-bottom: 4px;
 }
 
+.columns-dropdown__option--locked {
+  cursor: default;
+
+  input {
+    cursor: not-allowed;
+  }
+}
+
+.columns-dropdown__required {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-content-bg);
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.columns-dropdown__hint {
+  margin: 0 0 6px;
+  padding: 0 16px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
 .columns-dropdown__list {
   max-height: 320px;
   overflow-y: auto;

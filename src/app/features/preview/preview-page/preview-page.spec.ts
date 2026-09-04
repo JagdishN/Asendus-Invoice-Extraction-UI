@@ -83,10 +83,12 @@ describe('PreviewPage', () => {
     ]
   };
 
+  // None of these three are on the mandatory-columns list, so the dropdown behaves like a plain
+  // multi-select for this default fixture — mandatory-column locking gets its own describe block below.
   const exportColumns: ExportColumn[] = [
-    { field_name: 'line_number', label: 'Line #' },
-    { field_name: 'item_description', label: 'Item Description' },
-    { field_name: 'quantity', label: 'Quantity' }
+    { field_name: 'quantity', label: 'Quantity' },
+    { field_name: 'uom', label: 'UOM' },
+    { field_name: 'unit_rate', label: 'Unit Rate' }
   ];
 
   async function createComponent(): Promise<void> {
@@ -342,9 +344,9 @@ describe('PreviewPage', () => {
       const allCheckbox = checkboxFor('Select All');
       expect(allCheckbox.checked).toBe(true);
       expect(allCheckbox.indeterminate).toBe(false);
-      expect(checkboxFor('Line #').checked).toBe(true);
-      expect(checkboxFor('Item Description').checked).toBe(true);
       expect(checkboxFor('Quantity').checked).toBe(true);
+      expect(checkboxFor('UOM').checked).toBe(true);
+      expect(checkboxFor('Unit Rate').checked).toBe(true);
     });
 
     it('opens and closes the panel via the toggle button, and updates the count when a column is deselected', () => {
@@ -396,7 +398,7 @@ describe('PreviewPage', () => {
 
       (fixture.nativeElement.querySelector('.download-btn') as HTMLButtonElement).click();
 
-      expect(exportJob).toHaveBeenCalledWith('job-1', ['line_number', 'item_description']);
+      expect(exportJob).toHaveBeenCalledWith('job-1', ['uom', 'unit_rate']);
     });
 
     it('blocks the download and shows an error toast when every column is deselected', () => {
@@ -411,6 +413,74 @@ describe('PreviewPage', () => {
       expect(exportJob).not.toHaveBeenCalled();
       const toastService = TestBed.inject(ToastService);
       expect(toastService.toasts().map((t) => t.message)).toContain('Select at least one column before downloading.');
+    });
+  });
+
+  describe('mandatory columns', () => {
+    const mixedColumns: ExportColumn[] = [
+      { field_name: 'line_number', label: 'Line #' }, // mandatory (S.No)
+      { field_name: 'quantity', label: 'Quantity' } // not mandatory
+    ];
+
+    function toggle(): void {
+      (fixture.nativeElement.querySelector('.columns-dropdown__toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+    }
+
+    function optionFor(label: string): HTMLLabelElement {
+      const options = Array.from(
+        fixture.nativeElement.querySelectorAll('.columns-dropdown__option')
+      ) as HTMLLabelElement[];
+      return options.find((el) => el.textContent?.trim().includes(label)) as HTMLLabelElement;
+    }
+
+    beforeEach(async () => {
+      getExportColumns.mockReturnValue(of(mixedColumns));
+      exportJob.mockReturnValue(new Subject());
+      await createComponent();
+      paramMap$.next(convertToParamMap({ jobId: 'job-1' }));
+      fixture.detectChanges();
+      toggle();
+    });
+
+    it('shows a mandatory column as checked, disabled, and labeled "Required"; optional columns stay interactive', () => {
+      const lineNumberInput = optionFor('Line #').querySelector('input') as HTMLInputElement;
+      expect(lineNumberInput.checked).toBe(true);
+      expect(lineNumberInput.disabled).toBe(true);
+      expect(optionFor('Line #').textContent).toContain('Required');
+
+      const quantityInput = optionFor('Quantity').querySelector('input') as HTMLInputElement;
+      expect(quantityInput.disabled).toBe(false);
+      expect(optionFor('Quantity').textContent).not.toContain('Required');
+    });
+
+    it('does not let a mandatory column be deselected via its own checkbox', () => {
+      const lineNumberInput = optionFor('Line #').querySelector('input') as HTMLInputElement;
+      lineNumberInput.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__toggle').textContent).toContain('Columns (2/2)');
+    });
+
+    it('"Select All" unchecking keeps the mandatory column selected and only clears optional ones', () => {
+      const allCheckbox = optionFor('Select All').querySelector('input') as HTMLInputElement;
+      allCheckbox.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.columns-dropdown__toggle').textContent).toContain('Columns (1/2)');
+      expect((optionFor('Line #').querySelector('input') as HTMLInputElement).checked).toBe(true);
+      expect((optionFor('Quantity').querySelector('input') as HTMLInputElement).checked).toBe(false);
+    });
+
+    it('still includes the mandatory field_name in the download after clearing optional columns via "Select All"', () => {
+      const allCheckbox = optionFor('Select All').querySelector('input') as HTMLInputElement;
+      allCheckbox.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      toggle();
+
+      (fixture.nativeElement.querySelector('.download-btn') as HTMLButtonElement).click();
+
+      expect(exportJob).toHaveBeenCalledWith('job-1', ['line_number']);
     });
   });
 });

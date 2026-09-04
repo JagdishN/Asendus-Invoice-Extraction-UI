@@ -14,6 +14,39 @@ import { formatPageRanges } from '../../../core/utils/page-ranges';
 const LOW_CONFIDENCE_PATTERN = /not.?found|low|missing/i;
 
 /**
+ * Columns the business requires on every export — always selected, can't be unchecked.
+ * Mapped from the requested list of S.No / HSN / Description / MFG info / Batch No / Expiry /
+ * Packing / QTY / Free QTY / MRP / PTR / PTS / Discount / GST / Total Value onto the backend's
+ * field_names (see GET /api/jobs/export/columns). "Item Code" (product code) still has no
+ * corresponding export column, so it's not enforceable here — flagged to the user rather than
+ * guessed at. "MFG info" maps to mfg_date, added by the backend after this list was first drafted.
+ */
+const MANDATORY_COLUMN_FIELD_NAMES = new Set([
+  'line_number', // S.No
+  'hsn_sac', // HSN
+  'item_description', // Description
+  'batch_number', // Batch No
+  'expiry_date', // Expiry info
+  'mfg_date', // MFG info
+  'pack', // Packing info
+  'quantity_sold', // QTY
+  'quantity_free', // Free QTY
+  'mrp',
+  'ptr',
+  'rate_pts', // PTS
+  'discount_rate',
+  'discount_amount',
+  'cgst_rate',
+  'cgst_amount',
+  'sgst_rate',
+  'sgst_amount',
+  'igst_rate',
+  'igst_amount',
+  'line_total', // Total Value
+  'taxable_value' // Total Value
+]);
+
+/**
  * Read-only preview of a completed job, reached automatically after upload
  * (extraction is synchronous, so there's no polling — the job is already
  * complete by the time this page loads). Editing is a deferred follow-up.
@@ -94,6 +127,9 @@ export class PreviewPage {
   }
 
   protected toggleColumn(fieldName: string): void {
+    if (this.isMandatoryColumn(fieldName)) {
+      return;
+    }
     this.selectedColumns.update((current) => {
       const next = new Set(current);
       if (next.has(fieldName)) {
@@ -105,14 +141,21 @@ export class PreviewPage {
     });
   }
 
+  /** "Select All" toggles between every column and just the mandatory ones — mandatory columns can never be deselected. */
   protected toggleSelectAllColumns(): void {
     this.selectedColumns.set(
-      this.allColumnsSelected() ? new Set() : new Set(this.exportColumns().map((c) => c.field_name))
+      this.allColumnsSelected()
+        ? new Set(this.exportColumns().filter((c) => this.isMandatoryColumn(c.field_name)).map((c) => c.field_name))
+        : new Set(this.exportColumns().map((c) => c.field_name))
     );
   }
 
   protected isColumnSelected(fieldName: string): boolean {
     return this.selectedColumns().has(fieldName);
+  }
+
+  protected isMandatoryColumn(fieldName: string): boolean {
+    return MANDATORY_COLUMN_FIELD_NAMES.has(fieldName);
   }
 
   protected reviewFlag(group: InvoiceGroup): boolean {
