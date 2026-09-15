@@ -10,9 +10,16 @@ import { TopNav } from './top-nav';
 describe('TopNav', () => {
   const originalFeatures = { ...environment.features };
 
+  beforeEach(() => {
+    // AuthService now persists the token to localStorage — clear it so a login in one test
+    // doesn't leak into the next test's fresh instance.
+    localStorage.clear();
+  });
+
   afterEach(() => {
     environment.features.enableLogin = originalFeatures.enableLogin;
     environment.features.enableHistory = originalFeatures.enableHistory;
+    localStorage.clear();
   });
 
   async function createComponent() {

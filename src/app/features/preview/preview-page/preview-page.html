@@ -128,7 +128,7 @@
                       <span class="review-badge" title="Low confidence / not found">&#9888;</span>
                     }
                   </dt>
-                  <dd>{{ formatFieldValue(entry[1]) }}</dd>
+                  <dd>{{ formatFieldValue(entry[0], entry[1]) }}</dd>
                 </div>
               }
             </dl>
@@ -148,7 +148,7 @@
                   @for (item of group.line_items; track $index) {
                     <tr>
                       @for (col of lineItemColumns(group); track col) {
-                        <td>{{ formatFieldValue(item[col]) }}</td>
+                        <td>{{ formatFieldValue(col, item[col]) }}</td>
                       }
                     </tr>
                   }

@@ -28,7 +28,7 @@ describe('PreviewPage', () => {
     invoice_groups: [
       {
         invoice_number: 'INV-001',
-        header_fields: { vendor: 'Acme Co', total: '100.00' },
+        header_fields: { vendor: 'Acme Co', total: '100.00', invoice_date: '17.08.2026' },
         line_items: [
           { description: 'Widget', qty: 2, unit_price: '10.00' },
           { description: 'Gadget', qty: 1, unit_price: '80.00' }
@@ -176,6 +176,16 @@ describe('PreviewPage', () => {
     expect(headers).toEqual(['Description', 'Qty', 'Unit Price']);
     const rows = fixture.nativeElement.querySelectorAll('.line-items-table tbody tr');
     expect(rows.length).toBe(2);
+  });
+
+  it('formats the invoice_date header field as DD-MMM-YYYY', async () => {
+    await createComponent();
+    paramMap$.next(convertToParamMap({ jobId: 'job-1' }));
+    fixture.detectChanges();
+
+    const rows = Array.from(fixture.nativeElement.querySelectorAll('.detail-grid__row'));
+    const invoiceDateRow = rows.find((row) => (row as HTMLElement).textContent?.includes('Invoice Date')) as HTMLElement;
+    expect(invoiceDateRow.querySelector('dd')?.textContent?.trim()).toBe('17-Aug-2026');
   });
 
   it('shows tabs for multiple invoice groups and switches the visible section on click', async () => {

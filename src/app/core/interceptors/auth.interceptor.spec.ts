@@ -15,6 +15,9 @@ describe('authInterceptor', () => {
   let loginUrl: string;
 
   beforeEach(() => {
+    // AuthService now persists the token to localStorage — clear it so a login in one test
+    // doesn't leak into the next test's fresh instance.
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -31,6 +34,7 @@ describe('authInterceptor', () => {
 
   afterEach(() => {
     httpMock.verify();
+    localStorage.clear();
   });
 
   function login(): void {

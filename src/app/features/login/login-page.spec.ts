@@ -19,6 +19,9 @@ describe('LoginPage', () => {
   let loginUrl: string;
 
   beforeEach(async () => {
+    // AuthService now persists the token to localStorage (so a page refresh doesn't log the
+    // user out) — clear it so a login in one test doesn't leak into the next test's fresh instance.
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [LoginPage],
       providers: [
@@ -41,6 +44,7 @@ describe('LoginPage', () => {
 
   afterEach(() => {
     httpMock.verify();
+    localStorage.clear();
   });
 
   it('does not show a "Login with OTP" link, only "Forgot Password"', () => {

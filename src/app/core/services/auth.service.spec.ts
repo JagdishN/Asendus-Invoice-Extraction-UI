@@ -7,6 +7,9 @@ import { AuthApiService } from './auth-api.service';
 import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
 
+// Mirrors AuthService's private SESSION_STORAGE_KEY — there's no exported constant to import.
+const SESSION_STORAGE_KEY = 'invoice-extraction-ui.auth-session';
+
 describe('AuthService', () => {
   let service: AuthService;
   let router: Router;
@@ -15,6 +18,7 @@ describe('AuthService', () => {
   let loginUrl: string;
 
   beforeEach(() => {
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()]
     });
@@ -29,6 +33,7 @@ describe('AuthService', () => {
   afterEach(() => {
     httpMock.verify();
     vi.useRealTimers();
+    localStorage.clear();
   });
 
   function login(username = 'Admin', password = 'Admin@123'): void {
@@ -115,5 +120,82 @@ describe('AuthService', () => {
 
     // 40 minutes have passed since the first login, but only 20 since the second.
     expect(service.isAuthenticated()).toBe(true);
+  });
+
+  describe('persisting the session across a page refresh (localStorage)', () => {
+    /** Simulates an app restart: a fresh TestBed injector, so AuthService's constructor re-runs against whatever localStorage holds right now. */
+    function reinject(): AuthService {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()]
+      });
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      return TestBed.inject(AuthService);
+    }
+
+    it('login() persists the token and an absolute expiry time to localStorage', () => {
+      login();
+
+      const stored = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) ?? 'null');
+      expect(stored.token).toBe('jwt-123');
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
+      expect(stored.expiresAt).toBeLessThanOrEqual(Date.now() + 30 * 60 * 1000);
+    });
+
+    it('restores a still-valid session from localStorage on startup, instead of forcing a re-login', () => {
+      localStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({ token: 'restored-jwt', expiresAt: Date.now() + 5 * 60 * 1000 })
+      );
+
+      const restored = reinject();
+
+      expect(restored.isAuthenticated()).toBe(true);
+      expect(restored.accessToken()).toBe('restored-jwt');
+    });
+
+    it('discards an expired stored session and starts unauthenticated', () => {
+      localStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({ token: 'stale-jwt', expiresAt: Date.now() - 1000 })
+      );
+
+      const restored = reinject();
+
+      expect(restored.isAuthenticated()).toBe(false);
+      expect(localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    });
+
+    it('schedules expiry for the remaining time left, not a fresh 30 minutes, after restoring', () => {
+      vi.useFakeTimers();
+      localStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({ token: 'restored-jwt', expiresAt: Date.now() + 2 * 60 * 1000 })
+      );
+
+      const restored = reinject();
+
+      vi.advanceTimersByTime(2 * 60 * 1000 - 1);
+      expect(restored.isAuthenticated()).toBe(true);
+
+      vi.advanceTimersByTime(1);
+      expect(restored.isAuthenticated()).toBe(false);
+    });
+
+    it('logout() removes the stored session so a refresh afterward stays logged out', () => {
+      login();
+
+      service.logout();
+
+      expect(localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    });
+
+    it('expireSession() removes the stored session', () => {
+      login();
+
+      service.expireSession();
+
+      expect(localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    });
   });
 });

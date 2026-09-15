@@ -8,7 +8,10 @@ import { JobApiService } from '../../../core/services/job-api.service';
 import { JobDetailStore } from '../../../core/services/job-detail-store.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { triggerBlobDownload } from '../../../core/utils/download';
+import { formatInvoiceDate } from '../../../core/utils/invoice-date';
 import { formatPageRanges } from '../../../core/utils/page-ranges';
+
+const INVOICE_DATE_FIELD = 'invoice_date';
 
 /** Confirmed real value: "not_found". Exact vocabulary beyond that isn't confirmed, so this is matched loosely. */
 const LOW_CONFIDENCE_PATTERN = /not.?found|low|missing/i;
@@ -184,13 +187,16 @@ export class PreviewPage {
       .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 
-  /** header_fields values seen so far are scalars, null, or an array (e.g. tax_bracket_summary) — rendered generically so unexpected shapes don't break the table. */
-  protected formatFieldValue(value: HeaderFieldValue): string {
+  /** header_fields values seen so far are scalars, null, or an array (e.g. tax_bracket_summary) — rendered generically so unexpected shapes don't break the table, except invoice_date which gets DD-MMM-YYYY formatting. */
+  protected formatFieldValue(key: string, value: HeaderFieldValue): string {
     if (value === null || value === undefined || value === '') {
       return '—';
     }
     if (Array.isArray(value)) {
       return value.length > 0 ? value.map((entry) => String(entry)).join(', ') : '—';
+    }
+    if (key === INVOICE_DATE_FIELD && typeof value === 'string') {
+      return formatInvoiceDate(value);
     }
     return String(value);
   }
