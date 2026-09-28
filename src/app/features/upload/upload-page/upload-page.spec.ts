@@ -130,14 +130,14 @@ describe('UploadPage', () => {
       expect(fixture.nativeElement.querySelector('app-dropzone')).toBeTruthy();
     });
 
-    it('the preview sits in normal flow above the other controls (no absolute overlay)', () => {
+    it('the preview sits in normal flow below the compact file bar (no absolute overlay)', () => {
       selectFileViaDropzone(file);
 
       const preview = fixture.nativeElement.querySelector('.file-preview') as HTMLElement;
       const selectedFileRow = fixture.nativeElement.querySelector('.selected-file') as HTMLElement;
       expect(preview).toBeTruthy();
-      // Preview renders before the file info row in document order, i.e. stacked, not overlaid on top of it.
-      expect(preview.compareDocumentPosition(selectedFileRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      // The compact file bar renders before the preview in document order, i.e. stacked, not overlaid on top of it.
+      expect(selectedFileRow.compareDocumentPosition(preview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
   });
 
@@ -158,7 +158,7 @@ describe('UploadPage', () => {
     expect(createJob).not.toHaveBeenCalled();
     const dialog = fixture.nativeElement.querySelector('.dialog__message') as HTMLElement;
     expect(dialog.textContent).toBe(
-      'No Split Value has been entered. Do you want to proceed without a Split Value, or would you like to enter one?'
+      'No page split has been entered. Would you like to process the entire document as a single invoice?'
     );
   });
 

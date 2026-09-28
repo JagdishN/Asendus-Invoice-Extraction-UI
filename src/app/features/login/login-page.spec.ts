@@ -47,27 +47,34 @@ describe('LoginPage', () => {
     localStorage.clear();
   });
 
-  it('does not show a "Login with OTP" link, only "Forgot Password"', () => {
-    const links = (Array.from(fixture.nativeElement.querySelectorAll('.link')) as HTMLElement[]).map((a) =>
-      a.textContent?.trim()
-    );
+  it('shows the fixed account identity instead of a username field', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(links).toEqual(['Forgot Password']);
+    expect(compiled.querySelector('.login-account__role')?.textContent?.trim()).toBe('Administrator');
+    expect(compiled.querySelector('.login-account__username')?.textContent?.trim()).toBe('Admin');
+    expect(compiled.querySelectorAll('input')).toHaveLength(1);
+  });
+
+  it('toggles the password field between hidden and visible text', () => {
+    const passwordInput = () => fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    const toggleBtn = () => fixture.nativeElement.querySelector('.field__toggle-visibility') as HTMLButtonElement;
+
+    expect(passwordInput().type).toBe('password');
+
+    toggleBtn().click();
+    fixture.detectChanges();
+
+    expect(passwordInput().type).toBe('text');
   });
 
   it('disables the submit button until the form is valid', () => {
-    component['form'].setValue({ username: '', password: '' });
+    component['form'].setValue({ password: '' });
     fixture.detectChanges();
     const submitBtn = () => fixture.nativeElement.querySelector('.submit-btn') as HTMLButtonElement;
 
     expect(submitBtn().disabled).toBe(true);
 
-    const [usernameInput, passwordInput] = Array.from(
-      fixture.nativeElement.querySelectorAll('input')
-    ) as HTMLInputElement[];
-
-    usernameInput.value = 'alice';
-    usernameInput.dispatchEvent(new Event('input'));
+    const passwordInput = fixture.nativeElement.querySelector('input') as HTMLInputElement;
     passwordInput.value = 'secret123';
     passwordInput.dispatchEvent(new Event('input'));
     fixture.detectChanges();
@@ -76,15 +83,15 @@ describe('LoginPage', () => {
   });
 
   it('does not call the backend while the form is invalid', () => {
-    component['form'].setValue({ username: '', password: '' });
+    component['form'].setValue({ password: '' });
 
     component['submit']();
 
     httpMock.expectNone(loginUrl);
   });
 
-  it('submit calls POST /api/auth/login with the entered credentials', () => {
-    component['form'].setValue({ username: 'Admin', password: 'Admin@123' });
+  it('submit calls POST /api/auth/login with the fixed username and entered password', () => {
+    component['form'].setValue({ password: 'Admin@123' });
 
     component['submit']();
 
@@ -95,7 +102,7 @@ describe('LoginPage', () => {
   });
 
   it('disables the submit button while the request is in flight', () => {
-    component['form'].setValue({ username: 'Admin', password: 'Admin@123' });
+    component['form'].setValue({ password: 'Admin@123' });
     const submitBtn = () => fixture.nativeElement.querySelector('.submit-btn') as HTMLButtonElement;
 
     component['submit']();
@@ -113,7 +120,7 @@ describe('LoginPage', () => {
 
   it('on success, logs the user in and redirects to /upload', () => {
     const navigateSpy = vi.spyOn(router, 'navigateByUrl');
-    component['form'].setValue({ username: 'Admin', password: 'Admin@123' });
+    component['form'].setValue({ password: 'Admin@123' });
 
     component['submit']();
     const req = httpMock.expectOne(loginUrl);
@@ -126,7 +133,7 @@ describe('LoginPage', () => {
   it('on a 401, shows the exact backend error message and does not log in or navigate', () => {
     const navigateSpy = vi.spyOn(router, 'navigateByUrl');
     const toastSpy = vi.spyOn(toastService, 'error');
-    component['form'].setValue({ username: 'Admin', password: 'wrong-password' });
+    component['form'].setValue({ password: 'wrong-password' });
 
     component['submit']();
     const req = httpMock.expectOne(loginUrl);

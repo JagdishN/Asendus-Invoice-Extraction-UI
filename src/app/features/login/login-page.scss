@@ -1,25 +1,156 @@
 .login-page {
+  position: relative;
+  min-height: 100dvh;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px 36px;
+  overflow: hidden;
+
+  // A single, very subtle watermark — kept faint so it reads as texture, not
+  // as a repeating document-preview pattern.
+  &::before {
+    content: 'Asendus Innovations LLP';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-25deg);
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--color-text);
+    opacity: 0.015;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+.login-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 64px;
+  width: 100%;
+}
+
+.login-shell {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 48px;
+  width: 100%;
+  max-width: 940px;
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.login-brand__welcome {
+  margin-bottom: 2px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+}
+
+.login-brand__logo {
+  width: 230px;
+  height: 230px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.login-brand__title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.login-brand__tagline {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--color-muted);
+}
+
+.login-brand__flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.login-brand__flow-arrow {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.login-brand__client {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-muted);
 }
 
 .login-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
+  margin-left: auto;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  padding: 40px 32px;
+  padding: 36px 32px;
 }
 
 .login-card__title {
-  margin: 0 0 24px;
-  font-size: 1.5rem;
+  margin: 0 0 6px;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+.login-card__subtitle {
+  margin: 0 0 24px;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.login-account {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 24px;
+  padding: 12px;
+  background: var(--color-content-bg);
+  border-radius: var(--radius-md);
   text-align: center;
+}
+
+.login-account__role {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.login-account__divider {
+  color: var(--color-muted);
+}
+
+.login-account__username {
+  font-size: 0.9rem;
+  color: var(--color-muted);
 }
 
 .login-form {
@@ -41,6 +172,7 @@
 }
 
 .field input {
+  width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -53,25 +185,41 @@
   }
 }
 
+.field__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  input {
+    padding-right: 40px;
+  }
+}
+
+.field__toggle-visibility {
+  position: absolute;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--color-content-bg);
+    color: var(--color-text);
+  }
+}
+
 .field__error {
   font-size: 0.78rem;
   color: var(--color-danger);
-}
-
-.login-form__links {
-  display: flex;
-  justify-content: flex-end;
-  font-size: 0.85rem;
-}
-
-.link {
-  color: var(--color-accent);
-  text-decoration: none;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
 }
 
 .submit-btn {
@@ -93,5 +241,29 @@
   &:disabled {
     background: var(--color-muted);
     cursor: not-allowed;
+  }
+}
+
+.login-footer {
+  position: relative;
+  z-index: 1;
+  margin: 16px 0 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+@media (max-width: 860px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    max-width: 420px;
+  }
+
+  .login-brand__flow {
+    justify-content: center;
+  }
+
+  .login-card {
+    margin-left: 0;
   }
 }

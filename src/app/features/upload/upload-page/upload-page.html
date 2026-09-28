@@ -1,6 +1,6 @@
 <div class="upload-page">
-  <h1 class="upload-page__title">Upload an invoice</h1>
-  <p class="upload-page__subtitle">Upload a PDF or image to extract invoice data.</p>
+  <h1 class="upload-page__title">{{ pageTitle() }}</h1>
+  <p class="upload-page__subtitle">{{ pageSubtitle() }}</p>
 
   @if (!selectedFile()) {
     <app-dropzone (fileSelected)="onFileSelected($event)" (fileRejected)="onFileRejected($event)" />
@@ -9,21 +9,11 @@
   @if (selectedFile(); as file) {
     <div class="upload-layout">
       <div class="upload-layout__preview">
-        <div class="file-preview">
-          @if (previewKind() === 'image' && previewImageUrl(); as url) {
-            <img [src]="url" [alt]="'Preview of ' + file.name" class="file-preview__image" />
-          } @else if (previewKind() === 'pdf' && previewPdfUrl(); as url) {
-            <embed [src]="url" type="application/pdf" class="file-preview__pdf" />
-          } @else {
-            <div class="file-preview__placeholder">{{ fileExtensionLabel(file) }}</div>
-          }
-        </div>
-
         <div class="selected-file">
-          <div class="selected-file__info">
-            <span class="selected-file__name">{{ file.name }}</span>
-            <span class="selected-file__size">{{ formatFileSize(file.size) }}</span>
-          </div>
+          <span class="selected-file__icon" aria-hidden="true">&#128196;</span>
+          <span class="selected-file__name" [title]="file.name">{{ file.name }}</span>
+          <span class="selected-file__dot" aria-hidden="true">&bull;</span>
+          <span class="selected-file__size">{{ formatFileSize(file.size) }}</span>
           <button
             type="button"
             class="selected-file__remove"
@@ -33,24 +23,42 @@
             Remove
           </button>
         </div>
+
+        <div class="file-preview">
+          @if (previewKind() === 'image' && previewImageUrl(); as url) {
+            <img [src]="url" [alt]="'Preview of ' + file.name" class="file-preview__image" />
+          } @else if (previewKind() === 'pdf' && previewPdfUrl(); as url) {
+            <embed [src]="url" type="application/pdf" class="file-preview__pdf" />
+          } @else {
+            <div class="file-preview__placeholder">{{ fileExtensionLabel(file) }}</div>
+          }
+        </div>
       </div>
 
       <div class="upload-layout__controls">
         <label class="field">
-          <span class="field__label">Split value (optional)</span>
+          <span class="field__label">
+            Split invoice pages (optional)
+            <span class="field__info" title="Splits a multi-invoice PDF into separate invoices by page range before extraction.">&#9432;</span>
+          </span>
           <input
             type="text"
             class="field__input"
             [ngModel]="splitValue()"
             (ngModelChange)="splitValue.set($event)"
             [attr.disabled]="isSubmitting() || null"
-            placeholder="e.g. 5"
+            placeholder="e.g. 5, 2-4, 10-12, 13, 20-25"
           />
-          <span class="field__hint">Accepted formats: "5", "1-5", or "1-3, 4-6, 7-9"</span>
+          <span class="field__hint">Individual pages or ranges, separated by commas.</span>
         </label>
 
         <button type="button" class="submit-btn" [disabled]="isSubmitting()" (click)="onSubmit()">
-          {{ isSubmitting() ? 'Uploading…' : 'Upload' }}
+          @if (isSubmitting()) {
+            <span class="submit-btn__spinner" aria-hidden="true">&#8635;</span>
+            Extracting…
+          } @else {
+            Extract Invoice
+          }
         </button>
       </div>
     </div>
@@ -59,10 +67,10 @@
 
     @if (s.phase === 'needs-confirmation') {
       <app-confirm-dialog
-        title="No split value"
+        title="No page split specified"
         [message]="s.message"
-        confirmLabel="Proceed without split value"
-        cancelLabel="Go back and enter one"
+        confirmLabel="Process as Single Invoice"
+        cancelLabel="Add Page Split"
         (confirmed)="confirmProceedWithoutSplit()"
         (cancelled)="cancelProceedWithoutSplit()"
       />
@@ -71,10 +79,10 @@
 
   @if (awaitingSplitConfirmation()) {
     <app-confirm-dialog
-      title="No split value"
+      title="No page split specified"
       [message]="confirmMessage"
-      confirmLabel="Proceed without split value"
-      cancelLabel="Go back and enter one"
+      confirmLabel="Process as Single Invoice"
+      cancelLabel="Add Page Split"
       (confirmed)="confirmProceedWithoutSplit()"
       (cancelled)="cancelProceedWithoutSplit()"
     />

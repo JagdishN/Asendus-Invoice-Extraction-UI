@@ -70,7 +70,7 @@
         </div>
 
         <button type="button" class="download-btn" [disabled]="downloadingJob()" (click)="downloadJob(job)">
-          {{ downloadingJob() ? 'Downloading…' : 'Download' }}
+          {{ downloadingJob() ? 'Downloading…' : (job.invoice_groups && job.invoice_groups.length > 1 ? 'Download All as CSV' : 'Download CSV') }}
         </button>
       </div>
     </div>
@@ -87,9 +87,6 @@
               (click)="selectInvoice(i)"
             >
               {{ group.invoice_number || 'Invoice ' + (i + 1) }}
-              @if (reviewFlag(group)) {
-                <span class="review-badge" title="Needs review">&#9888;</span>
-              }
             </button>
           }
         </div>
@@ -101,9 +98,6 @@
         <div class="invoice-section">
           <div class="invoice-section__header">
             <h2>{{ group.invoice_number || 'Untitled invoice' }}</h2>
-            @if (reviewFlag(group)) {
-              <span class="review-badge review-badge--block">&#9888; Needs review</span>
-            }
           </div>
           <p class="invoice-section__pages">{{ formatPageRanges(group.source_page_list) }}</p>
 
@@ -114,24 +108,8 @@
               [disabled]="downloadingInvoice() === invoiceNumber"
               (click)="downloadInvoice(job, invoiceNumber)"
             >
-              {{ downloadingInvoice() === invoiceNumber ? 'Downloading…' : 'Download this invoice only' }}
+              {{ downloadingInvoice() === invoiceNumber ? 'Downloading…' : 'Download Invoice CSV' }}
             </button>
-          }
-
-          @if (headerFieldEntries(group).length > 0) {
-            <dl class="detail-grid">
-              @for (entry of headerFieldEntries(group); track entry[0]) {
-                <div class="detail-grid__row">
-                  <dt>
-                    {{ formatColumnLabel(entry[0]) }}
-                    @if (fieldNeedsReview(group, entry[0])) {
-                      <span class="review-badge" title="Low confidence / not found">&#9888;</span>
-                    }
-                  </dt>
-                  <dd>{{ formatFieldValue(entry[0], entry[1]) }}</dd>
-                </div>
-              }
-            </dl>
           }
 
           @if (group.line_items && group.line_items.length > 0) {

@@ -1,6 +1,8 @@
-<app-top-nav />
+@if (showNav()) {
+  <app-top-nav />
+}
 <app-toast />
 
-<main class="app-content">
+<main class="app-content" [class.app-content--no-nav]="!showNav()">
   <router-outlet />
 </main>

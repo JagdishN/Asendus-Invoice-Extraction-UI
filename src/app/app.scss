@@ -4,7 +4,12 @@
 }
 
 .app-content {
-  min-height: calc(100dvh - 64px);
+  min-height: calc(100dvh - 52px);
   background: var(--color-content-bg);
   padding: 32px 24px;
+}
+
+.app-content--no-nav {
+  min-height: 100dvh;
+  padding: 0;
 }

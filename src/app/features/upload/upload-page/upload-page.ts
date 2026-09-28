@@ -10,7 +10,7 @@ import { ConfirmDialog } from '../../../shared/confirm-dialog/confirm-dialog';
 import { Dropzone } from '../dropzone/dropzone';
 
 const NO_SPLIT_VALUE_CONFIRM_MESSAGE =
-  'No Split Value has been entered. Do you want to proceed without a Split Value, or would you like to enter one?';
+  'No page split has been entered. Would you like to process the entire document as a single invoice?';
 
 const PREVIEWABLE_IMAGE_PATTERN = /\.(jpe?g|png|webp)$/i;
 const PDF_PATTERN = /\.pdf$/i;
@@ -41,6 +41,12 @@ export class UploadPage implements OnDestroy {
   private readonly router = inject(Router);
 
   protected readonly selectedFile = signal<File | null>(null);
+  protected readonly pageTitle = computed(() => (this.selectedFile() ? 'Review Invoice' : 'Upload Invoice'));
+  protected readonly pageSubtitle = computed(() =>
+    this.selectedFile()
+      ? 'Review the document and extraction settings before processing.'
+      : 'Upload a PDF or image to extract invoice data.'
+  );
   protected readonly previewKind = signal<PreviewKind>(null);
   protected readonly previewImageUrl = signal<string | null>(null);
   protected readonly previewPdfUrl = signal<SafeResourceUrl | null>(null);

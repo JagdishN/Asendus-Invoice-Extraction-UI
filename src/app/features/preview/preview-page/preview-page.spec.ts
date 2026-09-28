@@ -161,14 +161,12 @@ describe('PreviewPage', () => {
     expect(fixture.nativeElement.querySelector('.invoice-tabs')).toBeFalsy();
   });
 
-  it('renders header fields and a line-items table with dynamic columns', async () => {
+  it('renders a line-items table with dynamic columns and hides the header-fields detail grid', async () => {
     await createComponent();
     paramMap$.next(convertToParamMap({ jobId: 'job-1' }));
     fixture.detectChanges();
 
-    const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Vendor');
-    expect(text).toContain('Acme Co');
+    expect(fixture.nativeElement.querySelector('.detail-grid')).toBeFalsy();
 
     const headers = Array.from(fixture.nativeElement.querySelectorAll('.line-items-table th')).map(
       (th) => (th as HTMLElement).textContent
@@ -178,14 +176,28 @@ describe('PreviewPage', () => {
     expect(rows.length).toBe(2);
   });
 
-  it('formats the invoice_date header field as DD-MMM-YYYY', async () => {
+  it('excludes the internal field_confidences key from the line-items table', async () => {
+    getJob.mockReturnValue(
+      of({
+        ...singleGroupJob,
+        invoice_groups: [
+          {
+            ...singleGroupJob.invoice_groups![0],
+            line_items: [
+              { description: 'Widget', qty: 2, unit_price: '10.00', field_confidences: { description: 'high' } }
+            ]
+          }
+        ]
+      })
+    );
     await createComponent();
     paramMap$.next(convertToParamMap({ jobId: 'job-1' }));
     fixture.detectChanges();
 
-    const rows = Array.from(fixture.nativeElement.querySelectorAll('.detail-grid__row'));
-    const invoiceDateRow = rows.find((row) => (row as HTMLElement).textContent?.includes('Invoice Date')) as HTMLElement;
-    expect(invoiceDateRow.querySelector('dd')?.textContent?.trim()).toBe('17-Aug-2026');
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('.line-items-table th')).map(
+      (th) => (th as HTMLElement).textContent
+    );
+    expect(headers).not.toContain('Field Confidences');
   });
 
   it('shows tabs for multiple invoice groups and switches the visible section on click', async () => {
@@ -204,17 +216,6 @@ describe('PreviewPage', () => {
     expect(fixture.nativeElement.querySelector('.invoice-section h2').textContent).toContain('INV-002');
   });
 
-  it('flags a needs_user_review invoice group with a visible badge', async () => {
-    getJob.mockReturnValue(of(multiGroupJob));
-    await createComponent();
-    paramMap$.next(convertToParamMap({ jobId: 'job-2' }));
-    fixture.detectChanges();
-
-    const tabs = fixture.nativeElement.querySelectorAll('.invoice-tabs__tab');
-    expect((tabs[1] as HTMLElement).querySelector('.review-badge')).toBeTruthy();
-    expect((tabs[0] as HTMLElement).querySelector('.review-badge')).toBeFalsy();
-  });
-
   it('falls back to a placeholder label and hides the per-invoice download link when invoice_number is null', async () => {
     getJob.mockReturnValue(of(unreviewedJob));
     await createComponent();
@@ -223,32 +224,6 @@ describe('PreviewPage', () => {
 
     expect(fixture.nativeElement.querySelector('.invoice-section h2').textContent).toContain('Untitled invoice');
     expect(fixture.nativeElement.querySelector('.download-link')).toBeFalsy();
-  });
-
-  it('flags a low-confidence header field individually and renders an empty array field as a placeholder', async () => {
-    getJob.mockReturnValue(of(unreviewedJob));
-    await createComponent();
-    paramMap$.next(convertToParamMap({ jobId: 'job-3' }));
-    fixture.detectChanges();
-
-    const rows = Array.from(fixture.nativeElement.querySelectorAll('.detail-grid__row'));
-    const partyNameRow = rows.find((row) => (row as HTMLElement).textContent?.includes('Party Name')) as HTMLElement;
-    expect(partyNameRow.querySelector('.review-badge')).toBeTruthy();
-    expect(partyNameRow.querySelector('dd')?.textContent?.trim()).toBe('—');
-
-    const taxBracketRow = rows.find((row) =>
-      (row as HTMLElement).textContent?.includes('Tax Bracket Summary')
-    ) as HTMLElement;
-    expect(taxBracketRow.querySelector('dd')?.textContent?.trim()).toBe('—');
-  });
-
-  it('shows the whole-group review badge when needs_user_review is true even with no per-field confidences', async () => {
-    getJob.mockReturnValue(of(unreviewedJob));
-    await createComponent();
-    paramMap$.next(convertToParamMap({ jobId: 'job-3' }));
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('.invoice-section .review-badge--block')).toBeTruthy();
   });
 
   it('downloads the job export using the Content-Disposition filename', async () => {
@@ -270,6 +245,24 @@ describe('PreviewPage', () => {
     expect(clickSpy).toHaveBeenCalled();
   });
 
+  it('labels the top-level download button "Download CSV" for a single invoice and "Download All as CSV" for multiple', async () => {
+    await createComponent();
+    paramMap$.next(convertToParamMap({ jobId: 'job-1' }));
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement.querySelector('.download-btn') as HTMLElement).textContent?.trim()).toBe(
+      'Download CSV'
+    );
+
+    getJob.mockReturnValue(of(multiGroupJob));
+    paramMap$.next(convertToParamMap({ jobId: 'job-2' }));
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement.querySelector('.download-btn') as HTMLElement).textContent?.trim()).toBe(
+      'Download All as CSV'
+    );
+  });
+
   it('falls back to a generated filename when Content-Disposition is missing', async () => {
     exportJob.mockReturnValue(of({ blob: new Blob(['data']), filename: null, contentType: 'application/zip' }));
     await createComponent();
@@ -282,7 +275,7 @@ describe('PreviewPage', () => {
     expect(createObjectURL).toHaveBeenCalled();
   });
 
-  it('downloads a single invoice via its "Download this invoice only" link', async () => {
+  it('downloads a single invoice via its "Download Invoice CSV" link', async () => {
     const result: JobExportResult = { blob: new Blob(['data']), filename: 'INV-001.csv', contentType: 'text/csv' };
     exportInvoice.mockReturnValue(of(result));
     await createComponent();

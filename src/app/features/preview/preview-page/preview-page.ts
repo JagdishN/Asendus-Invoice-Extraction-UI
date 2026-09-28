@@ -13,8 +13,8 @@ import { formatPageRanges } from '../../../core/utils/page-ranges';
 
 const INVOICE_DATE_FIELD = 'invoice_date';
 
-/** Confirmed real value: "not_found". Exact vocabulary beyond that isn't confirmed, so this is matched loosely. */
-const LOW_CONFIDENCE_PATTERN = /not.?found|low|missing/i;
+// Internal confidence metadata, not user-facing invoice data.
+const LINE_ITEM_COLUMN_EXCLUDE = new Set(['field_confidences']);
 
 /**
  * Columns the business requires on every export — always selected, can't be unchecked.
@@ -161,22 +161,12 @@ export class PreviewPage {
     return MANDATORY_COLUMN_FIELD_NAMES.has(fieldName);
   }
 
-  protected reviewFlag(group: InvoiceGroup): boolean {
-    return !!group.needs_user_review || this.isLowConfidence(group.invoice_number_confidence);
-  }
-
-  protected fieldNeedsReview(group: InvoiceGroup, key: string): boolean {
-    return this.isLowConfidence(group.header_field_confidences?.[key]);
-  }
-
-  protected headerFieldEntries(group: InvoiceGroup): [string, HeaderFieldValue][] {
-    return Object.entries(group.header_fields ?? {});
-  }
-
   protected lineItemColumns(group: InvoiceGroup): string[] {
     const keys = new Set<string>();
     for (const item of group.line_items ?? []) {
-      Object.keys(item).forEach((key) => keys.add(key));
+      Object.keys(item)
+        .filter((key) => !LINE_ITEM_COLUMN_EXCLUDE.has(key))
+        .forEach((key) => keys.add(key));
     }
     return [...keys];
   }
@@ -199,10 +189,6 @@ export class PreviewPage {
       return formatInvoiceDate(value);
     }
     return String(value);
-  }
-
-  private isLowConfidence(confidence: string | null | undefined): boolean {
-    return !!confidence && LOW_CONFIDENCE_PATTERN.test(confidence);
   }
 
   protected downloadJob(job: JobDetail): void {
